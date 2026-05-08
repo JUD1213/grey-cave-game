@@ -78,29 +78,21 @@ body {
     filter: grayscale(100%) contrast(200%) brightness(80%);
 }
 
-.pov-frame {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border: 12px solid #000;
-    mix-blend-mode: difference;
-    z-index: 5;
-}
 
 /* 圖片框 - 正方形 */
 .image-frame {
     position: relative;
     z-index: 10;
     width: 640px;
-    max-width: 470px;
+    max-width: 640px;
     height: 360px;
-    max-height: 400px;
-    border: 4px solid #fff;
+    max-height: 360px;
+    border: none;  /* ← 移除邊框 */
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 4px 4px 0 #fff;
+    box-shadow: none;  /* ← 移除陰影 */
     overflow: hidden;
 }
 
@@ -350,8 +342,6 @@ body {
         <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDouSALsTU9KCCzpBlRh3nqzdP2FTUf6h7lthWE3EGAyUHVD8Xli4IsACotweMuQ3Ys-jHYkqXbvM81KBDKOO4caimtqb1E6hu30XYMsCM3XbuzDRWN5qocow4HwO0taKG3y9_C07BUX6MZpt4lZr-aXaPZZktj1R3bGCWTnZB3-ckD7VGCKT-tsOsKUThO0viqAYxidVQLpr4huEzBArorP3AtoWqD4fzhnWA3b_u5YVTzUmh_fG2I196AIgAGFSsuJmvNBGrXCME" alt="Stone Wall">
         <div class="absolute inset-0 dither-50 pointer-events-none" style="position:absolute; top:0; left:0; right:0; bottom:0;"></div>
     </div>
-    
-    <div class="pov-frame"></div>
     
     <div class="image-frame">
         <div class="scene-label" id="scene-label">LOCATION_INN</div>
