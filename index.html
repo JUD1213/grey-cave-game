@@ -608,7 +608,7 @@ const scenes = {
 右邊牆上有一條窄縫,側身可以擠過去,對面隱約是另一條通道。水流從牆壁裂縫滲出來,牆角有幾塊鬆動的石頭。`;
         }
     },
-    getDarkness: () => state.flags.cattleReleased ? 0.3 : 0,  // ← 放過牲畜後加 30% 遮罩
+    getDarkness: () => state.flags.cattleReleased ? 0.9 : 0,  // ← 放過牲畜後加 90% 遮罩
     choices: [
         { text: '割繩放牲畜', next: 'D03a', cond: () => !state.flags.cattleReleased },  // ← 放過就消失
         { text: '檢查窄縫', next: 'D03b' },
