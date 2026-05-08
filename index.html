@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>灰石洞窟 - 完整版</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=swap" rel="stylesheet"/>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: #000;
+    color: #fff;
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    image-rendering: pixelated;
+}
+
+.dither-50 {
+    background-image: radial-gradient(#fff 0.5px, transparent 0);
+    background-size: 2px 2px;
+    opacity: 0.1;
+}
+
+@keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+.cursor { 
+    display: inline-block;
+    width: 8px;
+    height: 18px;
+    background: #fff;
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+/* 頂部狀態欄 */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #000;
+    border-bottom: 2px solid #fff;
+    font-family: 'VT323', monospace;
+    font-size: 24px;
+}
+.stat { display: flex; align-items: center; gap: 8px; }
+.stat .material-symbols-outlined { font-size: 24px; }
+
+/* POV 渲染區 */
+.viewport {
+    position: relative;
+    flex: 1;
+    min-height: 400px;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stone-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+.stone-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%) contrast(200%) brightness(80%);
+}
+
+.pov-frame {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 12px solid #000;
+    mix-blend-mode: difference;
+    z-index: 5;
+}
+
+/* 圖片框 - 正方形 */
+.image-frame {
+    position: relative;
+    z-index: 10;
+    width: 640px;
+    max-width: 470px;
+    height: 360px;
+    max-height: 400px;
+    border: 4px solid #fff;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0 #fff;
+    overflow: hidden;
+}
+
+.scene-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    filter: grayscale(100%) contrast(200%) brightness(90%);
+}
+
+.scene-label {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    color: #000;
+    padding: 2px 12px;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    white-space: nowrap;
+    letter-spacing: 1px;
+}
+
+/* 文字對話框 */
+.dialog-box {
+    background: #000;
+    padding: 16px;
+    border-top: 2px solid #fff;
+    height: 250px;
+    flex-shrink: 0;        /* ← 加這行,防止被壓縮 */
+}
+.dialog-inner {
+    border: 2px solid #fff;
+    height: 100%;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;    /* ← 加這行!內容靠底部 */
+    gap: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;    /* ← 加這行,避免橫向滾動 */
+}
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #fff;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+}
+.dialog-title {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+.text-content {
+    font-size: 18px;
+    line-height: 1.7;
+    color: #fff;
+    white-space: pre-wrap;
+    margin-top: auto;
+}
+
+/* 選項按鈕 */
+.choices-container {
+    padding: 12px 16px;
+    background: #000;
+    border-top: 1px solid #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.choice-btn {
+    width: 100%;
+    padding: 12px 16px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+    font-size: 17px;
+    text-align: left;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.1s;
+    box-shadow: 3px 3px 0 #000;
+    opacity: 0;
+    animation: slideIn 0.3s ease forwards;
+}
+.choice-btn:nth-child(1) { animation-delay: 0.05s; }
+.choice-btn:nth-child(2) { animation-delay: 0.1s; }
+.choice-btn:nth-child(3) { animation-delay: 0.15s; }
+.choice-btn:nth-child(4) { animation-delay: 0.2s; }
+.choice-btn:nth-child(5) { animation-delay: 0.25s; }
+.choice-btn:nth-child(6) { animation-delay: 0.3s; }
+
+.choice-btn:hover {
+    background: #ccc;
+    transform: translateX(4px);
+}
+.choice-btn:active {
+    transform: translateX(6px) translateY(2px);
+    box-shadow: 0 0 0 transparent;
+}
+
+.choice-btn.disabled {
+    background: #333;
+    color: #666;
+    border-color: #444;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.choice-btn.disabled:hover {
+    background: #333;
+    transform: none;
+}
+
+/* 底部工具欄 */
+.nav-bar {
+    height: 64px;
+    background: #000;
+    border-top: 2px solid #fff;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    padding: 8px;
+    transition: transform 0.1s;
+}
+.nav-item:hover { transform: scale(1.1); }
+.nav-item .material-symbols-outlined { font-size: 28px; }
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+    background: #000;
+    border: 3px solid #fff;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 6px 6px 0 #fff;
+}
+.modal h2 {
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    color: #fff;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #fff;
+    padding-bottom: 8px;
+}
+.modal-content {
+    color: #fff;
+    line-height: 1.8;
+    font-size: 16px;
+}
+.modal-item {
+    padding: 10px;
+    margin: 6px 0;
+    background: #111;
+    border-left: 3px solid #fff;
+}
+.modal-close {
+    margin-top: 16px;
+    padding: 12px 24px;
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+    cursor: pointer;
+    font-size: 18px;
+    font-family: 'VT323', monospace;
+    width: 100%;
+    transition: all 0.2s;
+    box-shadow: 3px 3px 0 #000;
+}
+.modal-close:hover { background: #ccc; }
+
+/* 響應式 */
+@media (min-width: 1024px) {
+    body {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .image-frame {
+        width: 80vw;
+        max-width: 400px;
+        height: calc(80vw * 9 / 16);
+        max-height: 250px;
+    }
+    .text-content { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="stat">
+        <span class="material-symbols-outlined" style="color:#ff0000; font-variation-settings: 'FILL' 1;">favorite</span>
+        <span id="hp-display">HP:24/24</span>
+    </div>
+    <div id="scene-title" style="letter-spacing:2px;">旅館起床</div>
+    <div class="stat">
+        <span class="material-symbols-outlined" style="color:#ffff00; font-variation-settings: 'FILL' 1;">paid</span>
+        <span id="money-display">40銅</span>
+    </div>
+</div>
+
+<div class="viewport">
+    <div class="stone-bg">
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDouSALsTU9KCCzpBlRh3nqzdP2FTUf6h7lthWE3EGAyUHVD8Xli4IsACotweMuQ3Ys-jHYkqXbvM81KBDKOO4caimtqb1E6hu30XYMsCM3XbuzDRWN5qocow4HwO0taKG3y9_C07BUX6MZpt4lZr-aXaPZZktj1R3bGCWTnZB3-ckD7VGCKT-tsOsKUThO0viqAYxidVQLpr4huEzBArorP3AtoWqD4fzhnWA3b_u5YVTzUmh_fG2I196AIgAGFSsuJmvNBGrXCME" alt="Stone Wall">
+        <div class="absolute inset-0 dither-50 pointer-events-none" style="position:absolute; top:0; left:0; right:0; bottom:0;"></div>
+    </div>
+    
+    <div class="pov-frame"></div>
+    
+    <div class="image-frame">
+        <div class="scene-label" id="scene-label">LOCATION_INN</div>
+        <img id="scene-image" class="scene-img" src="images/旅館室內（起床場景背景）.png" alt="場景圖片">
+        <div id="darkness-overlay" style="position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity 0.5s;"></div>
+    </div>
+</div>
+
+<div class="dialog-box">
+    <div class="dialog-inner">
+        <div class="dialog-header">
+            <span class="dialog-title">SYSTEM_LOG</span>
+            <span class="material-symbols-outlined" style="font-size:16px;">history</span>
+        </div>
+        <div id="text-content" class="text-content"></div>
+    </div>
+</div>
+
+<div id="choices-container" class="choices-container"></div>
+
+<div id="inventory-modal" class="modal-overlay">
+    <div class="modal">
+        <h2>🎒 背包物品</h2>
+        <div id="inventory-content" class="modal-content"></div>
+        <button class="modal-close" onclick="closeModal('inventory-modal')">關閉</button>
+    </div>
+</div>
+
+<div class="nav-bar">
+    <button class="nav-item" onclick="openInventory()">
+        <span class="material-symbols-outlined">backpack</span>
+        <span>背包</span>
+    </button>
+    <button class="nav-item" onclick="saveGame()">
+        <span class="material-symbols-outlined">save</span>
+        <span>存檔</span>
+    </button>
+    <button class="nav-item" onclick="loadGame()">
+        <span class="material-symbols-outlined">folder_open</span>
+        <span>讀檔</span>
+    </button>
+</div>
+
+<script>
+// ===== 遊戲狀態 =====
+const state = {
+    scene: 'S01',
+    hp: 24,
+    maxHp: 24,
+    money: 100,
+    items: [],
+    flags: { ears: 0, cattleReleased: false, visitedDeep: false },
+    injuries: []
+};
+
+// ===== 打字機效果 =====
+let typewriterRunning = false;
+
+function typeText(text, element, speed = 25) {
+    return new Promise(resolve => {
+        typewriterRunning = true;
+        element.innerHTML = '';
+        let i = 0;
+        
+        function type() {
+            if (i < text.length) {
+                if (text[i] === '\n') {
+                    element.innerHTML += '<br>';
+                } else {
+                    element.innerHTML += text[i];
+                }
+                i++;
+
+                const dialogInner = element.closest('.dialog-inner');
+                if (dialogInner) {
+                    dialogInner.scrollTop = dialogInner.scrollHeight;
+                }
+                setTimeout(type, speed);
+            } else {
+                element.innerHTML += '<span class="cursor"></span>';
+                typewriterRunning = false;
+                resolve();
+            }
+        }
+        type();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('text-content').addEventListener('click', () => {
+        if (typewriterRunning) {
+            typewriterRunning = false;
+            const scene = scenes[state.scene];
+            document.getElementById('text-content').innerHTML = scene.text.replace(/\n/g, '<br>') + '<span class="cursor"></span>';
+            showChoices(scene.choices);
+        }
+    });
+});
+
+// ===== 場景資料 =====
+const scenes = {
+    START: { 
+        title: '灰石洞窟', 
+        label: 'TITLE_SCREEN', 
+        img: 'images/title.jpg',  // ← 把這張圖存成 title.jpg 放到 images 資料夾
+        text: `一個關於哥布林、洞窟與選擇的冒險故事
+
+準備好火把。
+做好選擇。
+活著回來。
+
+DEMO v1.0`,
+        choices: [
+            { text: '🎮 開始遊戲', next: 'S01' },
+            { text: '💾 繼續遊戲', next: 'LOAD_GAME', cond: () => localStorage.getItem('灰石洞窟_存檔') },
+            { text: '📖 遊戲說明', next: 'HELP' }
+        ]
+    },
+    
+    HELP: {
+        title: '遊戲說明',
+        label: 'HELP',
+        img: 'images/title.jpg',
+        text: `===== 遊戲說明 =====
+
+【玩法】
+這是一個文字冒險遊戲,透過選擇選項推進劇情。
+
+【重要提示】
+- 購買裝備會影響戰鬥結果
+- 火把能讓你看清洞窟
+- 摸黑探索風險很高
+- 錯誤的選擇可能導致死亡
+
+【操作】
+- 點擊選項進行選擇
+- 點擊文字可跳過打字效果
+- 底部按鈕:背包/存檔/讀檔
+
+【目標】
+清剿哥布林洞窟,救出牲畜,活著回來。
+
+準備好了嗎?`,
+        choices: [
+            { text: '← 返回', next: 'START' },
+            { text: '🎮 開始遊戲', next: 'S01' }
+        ]
+    },
+    
+    LOAD_GAME: {
+        title: '讀取存檔',
+        label: 'LOAD',
+        img: 'images/title.jpg',
+        text: `確定要讀取之前的存檔嗎?`,
+        choices: [
+            { text: '✓ 確定讀取', next: 'LOADING', action: () => {
+                const saved = localStorage.getItem('灰石洞窟_存檔');
+                if (saved) {
+                    Object.assign(state, JSON.parse(saved));
+                }
+            }},
+            { text: '✗ 取消', next: 'START' }
+        ]
+    },
+    
+    LOADING: {
+        title: '讀取中...',
+        label: 'LOADING',
+        img: 'images/title.jpg',
+        getText: () => `存檔已讀取!
+
+HP: ${state.hp}/${state.maxHp}
+金錢: ${state.money}銅
+物品: ${state.items.length}個
+哥布林耳朵: ${state.flags.ears}對
+
+繼續冒險吧!`,
+        choices: [
+            { text: '→ 繼續', next: 'DYNAMIC' }
+        ],
+        getNext: () => state.scene
+    },
+
+    S01: { title: '落水丘旅館', label: 'LOCATION_INN', img: 'images/旅館室內（起床場景背景）.png',
+        text: `你從硬板床上起身,腰背有些酸痛。晨光透過半掩的窗戶投射進來,旅館的空氣裡混著陳舊木料和炭火的味道。你拿起一塊麵包簡單吃了早餐,拍拍皮甲上的灰,把短劍繫回腰帶。
+
+你走向長澤地區的酒館。`,
+        choices: [{ text: '前往長澤酒館', next: 'S02' }]
+    },
+    
+    S02: { title: '酒館', label: 'GUILD_HALL', img: 'images/冒險者公會大廳.png',
+        text: `你走進酒館大廳,空氣裡有皮革和油脂的氣味。告示板正中央釘著一張墨跡未乾的紙。
+
+「緊急委託:清剿哥布林洞窟」
+「昨晚哥布林襲擊了牧場,酪畜被掠奪,就連農場主都受傷了!必須立刻清剿!」
+「報酬:60銅。每對耳朵加賞。」
+
+「冒險者公會提醒:洞內極黑,自備照明。」
+
+看來這就是目前最棘手的麻煩了。你撕下了告示。
+
+「名字。」櫃台用羽毛筆飛快地劃了一下,聲音沒有起伏。
+
+「收你20銅幣,回來用左耳換錢。如果你沒回來,這筆錢會留給下一個進洞收屍的人。」`,
+        choices: [{ text: '支付20銅押金,前往鐵匠鋪', next: 'S03', action: () => state.money -= 20 }]
+    },
+    
+    S03: { title: '啤酒花鐵匠鋪', label: 'BLACKSMITH', img: 'images/鐵匠背對敲打.png',
+        text: `啤酒花街的鐵匠鋪裡瀰漫著火星和金屬的氣味。光著膀子的矮壯男人坐在工作台前,手裡的重鎚規律敲擊著,幾乎不抬頭。
+
+你可以在這裡購買裝備:`,
+        choices: [
+            { text: '🗡️ 匕首 — 8銅', next: 'S03', price: 8, item: '匕首', desc: '匕首很輕,重心平衡,看起來很適合投擲' },
+            { text: '🛡️ 木盾 — 12銅', next: 'S03', price: 12, item: '木盾', desc: '木盾相當厚實,不知複合了幾片木板,拿起來有些笨重' },
+            { text: '🔧 修理皮甲 — 5銅', next: 'S03', price: 5, item: '皮甲已修理', desc: '縫線重新拉緊後,皮甲穿起來變得扎實多了' },
+            { text: '前往雜貨店', next: 'S04' }
+        ]
+    },
+    
+    S04: { title: '長澤市集', label: 'GENERAL_STORE', img: 'images/雜貨店室內.png',
+        text: `你回到長澤市集一個,走進一間小店,貨架上堆滿瓶瓶罐罐,散發著各種物藥混合後的淡淡氣味。
+
+你可以在這裡購買消耗品:`,
+        choices: [
+            { text: '🔥 火把×3 — 3銅', next: 'S04', price: 3, item: '火把', desc: '粗糙的木棒纏著浸油布料,聞起來很刺鼻', action: () => state.flags.hasFireTorch = true },
+            { text: '🪢 繩索 — 4銅', next: 'S04', price: 4, item: '繩索', desc: '亞麻繩索,盤成一圈掛在腰間' },
+            { text: '⚗️ 治療藥水 — 10銅', next: 'S04', price: 10, item: '治療藥水', desc: '玻璃瓶裡晃盪著紅酒色的液體' },
+            { text: '前往陰花巷', next: 'S05' }
+        ]
+    },
+    
+    S05: { title: '陰花巷', label: 'BLACK_MARKET', img: 'images/黑市暗巷.png',
+        text: `暗巷盡頭掛著一道簾子,掀開後裡面光線更暗。賣家靠牆坐著,沒有說話,讓你自己看。
+
+你可以在這裡購買特殊物品:`,
+        choices: [
+            { text: '☠️ 毒藥 — 15銅', next: 'S05', price: 15, item: '毒藥', desc: '瓶身在微光下閃爍,裡頭的液體呈現不詳的暗紫色' },
+            { text: '💨 煙霧彈 — 12銅', next: 'S05', price: 12, item: '煙霧彈', desc: '丟出會噴發出濃煙,別丟在敵人身上,要丟在腳邊' },
+            { text: '🔥 燃燒瓶 — 14銅', next: 'S05', price: 14, item: '燃燒瓶', desc: '瓶口塞著浸油的布條,點上火就是極其便利的火藥桶' },
+            { text: '出發前往北貧民窟郊外', next: 'W01' }
+        ]
+    },
+    
+    W01: { title: '郊外', label: 'WILDERNESS', img: 'images/野外小徑（白天出發）.png',
+        text: `你沿著溪流往東北走了半天。溪水清澈,兩岸草地在風裡搖動,偶爾有鳥從頭頂掠過。越往南走,草叢愈見稀疏,地面開始出現凌亂的痕跡。
+
+地面上,原本平整的泥土被踩得凌亂,混雜著碎裂的骨頭與暗褐色的血跡。草叢被粗暴地壓平,指向前方不遠處那個陰森的山洞。
+
+你到達洞窟入口。那是一道歪斜的石縫,大約兩人寬,邊緣粗糙沒有規則,像是從裡面頂開崩落的入口。周圍的草都是踩踏成泥徑的腳印,混著幾塊碎骨和乾掉的殘骸,顏色深淺不一。一股腐敗的氣味從裡面吹出來。往裡頭看去,洞窟就像一張張開的臭嘴,吞噬了所有光線。你只看得見一片漆黑。`,
+        choices: [{ text: '觀察入口', next: 'W02' }]
+    },
+    
+    W02: { title: '洞口', label: 'CAVE_ENTRANCE', img: 'images/洞窟入口.png',
+        text: `你蹲下來仔細看地面。靠近洞口的泥土裡有密集的小型腳印,方向混亂,反覆進出。那些深淺不一的殘骸顯示這裡的哥布林活動已經持續一段時間,而且進出的數量不少。
+
+裡面有一組較大的蹄印,邊緣被拖拉過,看得出來痕跡是牲畜被強行拖進去的掙扎。洞口兩側的石壁底部都有深色的汙跡,右側的摩擦痕跡比左側來的多。
+
+向前走三步後就全黑了,看不到更多。`,
+        choices: [
+            { text: '🔥 點燃火把進入', next: 'D01', cond: () => state.flags.hasFireTorch },
+            { text: '🌑 摸黑進入', next: 'D01d' }
+        ]
+    },
+    
+    D01: { title: '岔路口', label: 'FORK_ILLUMINATED', img: 'images/岔路口.png',
+        text: `你點燃火把,走了約十步,通道在前方分成兩條。火光把石壁照得橘紅,地面的細節一覽無遺。
+
+左邊地面潮濕,有水流聲從深處傳來,蹄印清楚地往左邊延伸。右邊地面乾燥安靜,有一陣陰風從深處吹來,空氣中沒有那股強烈腥臭,帶著淡淡的油漬氣味。`,
+        choices: [
+            { text: '走左邊', next: 'D02' },
+            { text: '走右邊', next: 'D04' }
+        ]
+    },
+    
+    D01d: { title: '岔路口', label: 'FORK_DARKNESS', img: 'images/岔路口.png',darkness: 0.85,
+        text: `你摸黑走進洞窟,手扶著粗糙的石壁,一片漆黑,什麼都看不見。於是放慢步伐試探著前進。
+
+視覺徹底失效,只剩下指尖的觸感與呼吸聲,你注意到左邊傳來潺潺的水流聲。右邊則有微弱的風吹在臉上,帶著一絲煙味。看不到地面,也看不到任何東西。`,
+        choices: [
+            { text: '往有水聲的方向', next: 'D02d' },
+            { text: '往有風的方向', next: 'D04d' }
+        ]
+    },
+    
+    D02: { title: '積水的通道', label: 'WATERWAY', img: 'images/水道通道1.png',
+        text: `你走進一條低矮的通道,天花板不斷滴水,每一滴都落在泥濘上。腳踩進淺淺的水流,水是涼的,帶著一點黏性,不完全是乾淨的水。
+
+通道兩側的石壁底部有深色的積汙,越往裡走氣味越悶,像是有什麼東西在這條路上被拖過很多次。
+
+走了大約五十步,通道突然打開,變成一間天然石室。`,
+        choices: [{ text: '進入石室', next: 'D03' }]
+    },
+    
+    D02d: { title: '有水聲的通道', label: 'WATERWAY_DARK', img: 'images/水道通道1.png',darkness: 0.85,
+        text: `你沒入絕對的黑暗,視覺在此毫無意義。
+
+每一滴水落在泥濘上的聲音在隧道裡迴盪,聽起來異常響亮。你踩進淺淺的水流中,腳底傳來一種涼意,但伴隨而來的是一種黏稠的拉扯感,不像是純粹的水。
+
+你沿著牆壁摸索前進,石壁底部摸起來滑膩且潮濕,指尖沾滿了不知名的厚重積汙。隨著深入,空氣變得愈發悶熱,那股被拖行過後的腥臭味在狹窄的空間裡幾乎讓你窒息。
+
+走了大約五十步,指尖傳來的牆壁感突然消失了。腳步的回音變得空洞,冷風從四面八方吹來。`,
+        choices: [{ text: '摸黑前進', next: 'D03d' }]
+    },
+
+    D03d: { 
+    title: '未知空間', 
+    label: 'STORAGE_DARK', 
+    img: 'images/儲藏室牛羊.png',
+    darkness: 0.85,
+    text: `黑暗中,你什麼都看不到。
+
+腳下的地面凹凸不平,踩到水窪發出啪嗒聲。前方傳來牲畜的呼吸聲和蹄子踩動的聲音,還有繩索繃緊的摩擦聲。空氣裡混著動物的氣味和腐敗的惡臭。
+
+你摸索著前進,手碰到了粗糙的繩索,順著繩索摸到石筍。牲畜察覺到你的存在,開始不安地躁動。
+
+在黑暗中你無法判斷房間的大小,也看不清周圍有什麼。只能憑觸覺和聲音判斷方向。`,
+    choices: [
+        { text: '摸索著割斷繩索', next: 'D03a' },
+        { text: '沿著牆壁繼續摸索', next: 'D03b' },  // 進入縫隙場景
+        { text: '原路退回去', next: 'D02d' }
+    ]
+},
+    
+    D03: { 
+    title: '石室', 
+    label: 'STORAGE_ROOM', 
+    img: 'images/儲藏室牛羊.png',
+    getText: () => {
+        if (state.flags.cattleReleased) {
+            // 放過牲畜後的描述
+            return `這是一間約一房大小的天然石室,地面凹凸不平,低窪處積著混濁的水。角落裡原本綁著牲畜的繩索鬆垮地掛在石筍上,旁邊堆著骨頭,大小不一,有些太小,不像是牲畜的。
+
+靠近入口的地面有一片明顯的濕滑區,石頭被磨得發亮,是長期有東西在這裡停留的痕跡。
+
+右邊牆上有一條窄縫,側身可以擠過去,對面隱約是另一條通道。水流從牆壁裂縫滲出來,牆角有幾塊鬆動的石頭。`;
+        } else {
+            // 原本的描述
+            return `這是一間約一房大小的天然石室,地面凹凸不平,低窪處積著混濁的水。角落裡兩頭牛和幾隻羊用粗繩綁在石筍上,旁邊堆著骨頭,大小不一,有些太小,不像是牲畜的。
+
+靠近入口的地面有一片明顯的濕滑區,石頭被磨得發亮,是長期有東西在這裡停留的痕跡。牲畜看到火光開始躁動,繩子繃得很緊。
+
+右邊牆上有一條窄縫,側身可以擠過去,對面隱約是另一條通道。水流從牆壁裂縫滲出來,牆角有幾塊鬆動的石頭。`;
+        }
+    },
+    getDarkness: () => state.flags.cattleReleased ? 0.3 : 0,  // ← 放過牲畜後加 30% 遮罩
+    choices: [
+        { text: '割繩放牲畜', next: 'D03a', cond: () => !state.flags.cattleReleased },  // ← 放過就消失
+        { text: '檢查窄縫', next: 'D03b' },
+        { text: '檢查水流和鬆動的石頭', next: 'D03c', cond: () => state.items.includes('繩索') },
+        { text: '原路回去走右岔路', next: 'D04' }
+    ]
+},
+    
+    D03a: { title: '解放牲畜', label: 'STORAGE_RELEASE', img: 'images/在洞口乖乖等你的羊.png',
+        text: `你用刀割斷綁在石筍上的繩子,兩頭牛和幾隻羊自由了,立刻開始躁動不安地叫嚷著,在原地打轉。沒辦法帶著牠們繼續探索。`,
+        choices: [
+            { text: '把牲畜趕回洞口,自己繼續探索', next: 'D03', action: () => state.flags.cattleReleased = true },
+            { text: '先不管牲畜,繼續探索', next: 'D03' }
+        ]
+    },
+    
+    D03b: { title: '窄縫', label: 'STORAGE_CREVICE', img: 'images/窄縫對面有光.png',
+        text: `窄縫大約半人寬,側身才能擠過去。你能看到對面是一條乾燥的通道,有火光餘燼。木盾如果帶著的話需要先取下拿在手上才擠得過去。這條縫通到右岔路的哨站背後。`,
+        choices: [
+            { text: '擠過去', next: 'D04a' },
+            { text: '先不過去,回到石室', next: 'D03' }
+        ]
+    },
+    
+    D03c: { title: '鬆動的石頭', label: 'STORAGE_FLOOD', img: 'images/搬開石頭放水.png',
+        text: `你搬開牆角的鬆動石頭,水流立刻變得更大,嘩嘩地往窄縫方向灌過去。對面傳來水拍地面的聲音越來越大,接著遠處傳來幾聲哥布林吱吱喳喳的叫聲,像是在慌張。右岔路那邊開始變得潮濕嘈雜。`,
+        choices: [
+            { text: '趁對面混亂,從窄縫擠過去', next: 'D04b', action: () => state.flags.waterReleased = true },
+            { text: '回到石室', next: 'D03' }
+        ]
+    },
+    
+    D04: { title: '哨站', label: 'OUTPOST_FRONT', img: 'images/哨站正面.png',
+        text: `你持著火把從右岔路走了約八十步來到哨站。這裡是一處稍寬的通道節點,石壁上熏著黑色的油煙痕跡,地面堆著嚼過的骨頭和一些說不清楚是什麼的碎屑,散發出一種悶濁的腥臭。
+
+轉角處的牆壁旁,一個哥布林靠著牆打瞌睡,手裡鬆鬆地握著一把生鏽小刀。另一個蹲在地上玩骨頭,石頭架起的木板桌上放著啃了一半的生肉,血水已經乾掉了一圈。它們沒有發現你。`,
+        choices: [
+            { text: '悄悄接近偷襲睡著的那個', next: 'D05a' },
+            { text: '直接衝上去打', next: 'D05b' },
+            { text: '在桌上的生肉下毒,退回去等待', next: 'D05d', cond: () => state.items.includes('毒藥') }
+        ]
+    },
+    
+    D04a: { title: '潛入哨站', label: 'OUTPOST_REAR', img: 'images/哨站兩隻哥布林背對.png',
+        text: `你從石室的窄縫擠過來,出現在哨站的後方。這個角度能看到整個空間的輪廓,地面凌亂,骨頭和殘渣堆在角落,石壁底部有一片發亮的濕滑區,是常駐的痕跡。
+
+兩個哥布林完全背對著你,一個靠牆打瞌睡,一個蹲在地上玩骨頭,完全沒有注意到你出現在它們身後。`,
+        choices: [
+            { text: '偷襲,先砍近的那個', next: 'D05a' },
+            { text: '投擲匕首打遠的,衝上去砍近的', next: 'D05a', cond: () => state.items.includes('匕首') },
+            { text: '悄悄經過它們', next: 'B01' }
+        ]
+    },
+    
+    D04b: { title: '積水的哨站', label: 'OUTPOST_FLOODED', img: 'images/哨站兩隻哥布林背對.png',
+        text: `你搬石頭放水之後從窄縫擠過來,腳踩進積水裡,水是涼的。哨站地面積了一層水,在火光下反著光。
+
+兩個哥布林背對著你蹲在地上,用手撥弄著水,其中一個在嘰嘰喳喳地罵另一個,聲音又急又尖。骨頭和殘渣漂在水面上,氣味反而更衝了。它們完全沒有注意到你。`,
+        choices: [
+            { text: '趁它們蹲著直接衝上去', next: 'D05a' },
+            { text: '投擲匕首', next: 'D05a', cond: () => state.items.includes('匕首') }
+        ]
+    },
+    
+D04d: { 
+    title: '未知的空間', 
+    label: 'OUTPOST_DARK', 
+    img: 'images/哨站正面.png',
+    darkness: 0.85,
+    text: `你摸黑走了約八十步,突然腳下踢到了某個東西,喀拉一聲響。前方傳來哥布林吱吱喳喳的聲音,似乎有人拿起武器的聲響。你在黑暗中看不到任何東西。`,
+    choices: [
+        { 
+            text: '壓低身子,聽聲辨位反擊', 
+            next: 'RANDOM',  // ← 改成 RANDOM 標記
+            randomNext: [
+                { next: 'D05a', chance: 0.3 },  // 30% 偷襲成功
+                { next: 'D05c', chance: 0.7 }   // 70% 摸黑戰鬥
+            ]
+        },
+        { text: '後退', next: 'DEATH' }
+    ]
+},
+    
+    D05a: { title: '偷襲成功', label: 'OUTPOST_VICTORY', img: 'images/偷襲手持劍特寫.png',
+        text: `你壓低腳步靠近,一劍刺進第一個哥布林的喉嚨,聲音被悶住了。第二個轉頭看到你,抓起刀撲過來。你用盾擋住它的刀,反手一劍。兩個都解決了,你未受傷。
+
+你割下哥布林的耳朵。前方通道通往更深處,能看到遠處有篝火的光。`,
+        choices: [
+            { text: '繼續往前', next: 'B01', action: () => state.flags.ears += 2 }
+        ]
+    },
+    
+    D05b: { title: '正面作戰', label: 'OUTPOST_FRONTAL', img: 'images/哨站正面.png',
+        text: `你衝上去揮劍砍倒第一個哥布林,但第二個從側面撲過來,刀劃過你的前臂,留下一道淺口子。你用盾頂開它補了一劍。兩個都倒了。
+
+你割下哥布林的耳朵。`,
+        choices: [
+            { text: '繼續前進', next: 'B01', action: () => { state.flags.ears += 2; state.hp -= 2; state.injuries.push('左前臂輕傷'); }}
+        ]
+    },
+    
+    D05c: { title: '摸黑戰鬥', label: 'OUTPOST_BLIND', img: 'images/哨站正面.png',
+        text: `你突然被黑暗中的動靜驚到,兩個哥布林悄無聲息地靠近。你聽到動靜揮劍砍中了一個,但另一個跳上來咬住了你的肩膀。你用力甩開它,踩住砍死。兩個都倒了。
+
+你肩膀被咬傷,流血不止。`,
+        choices: [
+            { text: 'A. 喝藥水處理傷口', next: 'B01', cond: () => state.items.includes('治療藥水'), action: () => { state.flags.ears += 2; state.items = state.items.filter(i => i !== '治療藥水'); }},
+            { text: 'B. 忍痛繼續前進', next: 'B01', action: () => { state.flags.ears += 2; state.hp -= 5; state.injuries.push('肩膀咬傷'); }}
+        ]
+    },
+    
+    D05d: { title: '下毒', label: 'OUTPOST_POISON', img: 'images/哨站正面.png',
+        text: `你退回轉角處等待。大約一刻鐘後,開始聽見噁心的咀嚼聲,隨後是咳嗽聲,接著傳來一陣倒地的聲音。你走回去,看到一個哥布林在地上抽搐,而另一個驚慌失措地蹲在角落裡,一見到你就尖叫著往巢穴方向跑。`,
+        choices: [
+            { text: '追上去', next: 'B02', action: () => { state.flags.ears += 1; state.items = state.items.filter(i => i !== '毒藥'); }}
+        ]
+    },
+    
+    B01: { title: '巢穴', label: 'NEST_UNALERTED', img: 'images/巢穴未警戒.png',
+        text: `你走進一個大型石室,比前面所有空間都寬。篝火在中央燒著,煙往頭頂的天然裂縫飄上去,把整個石室燻成深褐色。地面沒有任何規劃,骨頭、殘食、破布和說不出是什麼的堆積物隨意散落,踩上去軟硬不一。
+
+五個哥布林加一個比較大的頭目,兩個在角落睡覺,兩個在爭搶一塊肉,頭目坐在石頭上,眼神空洞地看著篝火。石室有幾處低窪積水,空氣裡的腐敗氣味比外面任何地方都重,像是這裡從來沒有通過風。`,
+        choices: [
+            { text: '退出洞窟,從裂縫丟燃燒瓶進去', next: 'B03', cond: () => state.items.includes('燃燒瓶') },
+            { text: '從通道口丟煙霧彈後殺入', next: 'B04', cond: () => state.items.includes('煙霧彈') },
+            { text: '在通道口設絆索陷阱然後丟石頭引誘', next: 'B05', cond: () => state.items.includes('繩索') },
+            { text: '觀察,尋找弱點', next: 'B01d' },
+            { text: '直接開打', next: 'B06' }
+        ]
+    },
+    
+    B01d: { title: '觀察巢穴弱點', label: 'NEST_OBSERVE', img: 'images/巢穴未警戒.png',darkness: 0.85,
+        text: `你沒有動,站在通道口的陰影裡,讓眼睛慢慢適應篝火的光線。
+
+頭目坐的位置在石室後方,但那裡地面最低,積水最深,它如果要站起來移動會比其他個體慢。兩個睡著的哥布林靠著同一面牆,中間隔著一堆骨頭,如果其中一個被驚醒發出聲音,另一個會先看向骨堆方向而不是入口。
+
+爭搶食物的那兩個距離入口最近,但它們的注意力在彼此身上。篝火在石室正中央,如果有東西打亂篝火,整個空間會瞬間變暗。
+
+你知道了:頭目移動慢、睡覺個體反應方向可預測、篝火是可以利用的變數。`,
+        choices: [
+            { text: '使用燃燒瓶', next: 'B03', cond: () => state.items.includes('燃燒瓶') },
+            { text: '使用煙霧彈', next: 'B04', cond: () => state.items.includes('煙霧彈') },
+            { text: '設陷阱', next: 'B05', cond: () => state.items.includes('繩索') },
+            { text: '直接開打', next: 'B06' }
+        ]
+    },
+    
+    B02: { title: '巢穴', label: 'NEST_ALERTED', img: 'images/巢穴警戒1.png',
+        text: `石室和剛才一樣,篝火、骨堆、積水、腐敗的氣味。但現在五個哥布林全部醒著,全部面向通道入口,手裡握著武器,眼睛盯著你走進來的方向。頭目站在後方,沒有說話,只是抬了一下手。
+
+比未警戒時難得多,因為它們已經知道有人來了。`,
+        choices: [
+            { text: '退出洞窟,從裂縫丟燃燒瓶進去', next: 'B03', cond: () => state.items.includes('燃燒瓶') },
+            { text: '從通道口丟煙霧彈後殺入', next: 'B04', cond: () => state.items.includes('煙霧彈') },
+            { text: '直接開打', next: 'B06' }
+        ]
+    },
+    
+    B03: { title: '燃燒瓶', label: 'NEST_FIREBOMB', img: 'images/燃燒瓶投下瞬間.png',
+        text: `你退出洞窟,爬到洞頂。裂縫大約有一個頭的寬度,你往下看正對篝火的位置。點燃燃燒瓶後扔了下去,轟的一聲火焰炸開,哥布林發出慘叫聲。
+
+你等了一會兒再從正門進去。三個燒死,兩個帶著火逃進深處通道消失了。頭目倒在地上還在動。`,
+        choices: [
+            { text: '結束頭目', next: 'D06', action: () => { state.flags.ears += 4; state.items = state.items.filter(i => i !== '燃燒瓶'); }},
+            { text: '綁起來活捉', next: 'E03', cond: () => state.items.includes('繩索'), action: () => { state.flags.ears += 3; state.items = state.items.filter(i => i !== '燃燒瓶'); }}
+        ]
+    },
+    
+    B04: { title: '煙霧彈突擊', label: 'NEST_SMOKE', img: 'images/巢穴警戒2.png',
+        text: `你把煙霧彈丟進巢穴石室,灰白煙霧迅速擴散,哥布林四下叫喊。你衝進去,在混亂中砍倒了兩個哥布林。一個抓住你的腿,你踢開它但腳踝被抓傷。
+
+煙霧散去後,剩三個哥布林往深處通道逃跑。頭目最後走,回身看了你一眼。`,
+        choices: [
+            { text: '追上去', next: 'D06', action: () => { state.flags.ears += 2; state.hp -= 2; state.injuries.push('腳踝輕傷'); state.items = state.items.filter(i => i !== '煙霧彈'); }},
+            { text: '不追', next: 'E01', action: () => { state.flags.ears += 2; state.hp -= 2; state.items = state.items.filter(i => i !== '煙霧彈'); }}
+        ]
+    },
+    
+    B05: { title: '設陷阱引誘', label: 'NEST_TRAP', img: 'images/繩索陷阱特寫.png',
+        text: `你在巢穴通道口拉了兩道繩索,一高一低。然後拿石頭往石室裡砸,聽到慌張的腳步聲傳來。第一個哥布林被高繩絆倒,你的劍已經等在那裡。第二個踩到低繩跪下去。但第三個跳過了繩子直接撲向你,近距離混戰。
+
+殺了三個,但手臂被砍了一道口子。石室裡剩兩個和頭目,沒有追出來,往深處通道撤退了。`,
+        choices: [
+            { text: '處理傷口再進去', next: 'D06', cond: () => state.items.includes('治療藥水'), action: () => { state.flags.ears += 3; state.items = state.items.filter(i => i !== '繩索' && i !== '治療藥水'); }},
+            { text: '忍痛追上去', next: 'D06', action: () => { state.flags.ears += 3; state.hp -= 4; state.injuries.push('手臂中傷'); state.items = state.items.filter(i => i !== '繩索'); }},
+            { text: '不追', next: 'E01', action: () => { state.flags.ears += 3; state.items = state.items.filter(i => i !== '繩索'); }}
+        ]
+    },
+    
+    B06: { title: '開打', label: 'NEST_FRONTAL', img: 'images/巢穴頭目未警戒.png',
+        text: `你衝進巢穴正面打那六個哥布林。砍倒第一個後就被四個圍攻,背靠牆,被兩側夾擊,一刀劃過肋骨,很疼。`,
+        choices: [
+            { text: '用盾頂住左側專注右邊', next: 'B06win', cond: () => state.items.includes('木盾'), action: () => { state.hp -= 3; state.injuries.push('肋骨輕傷'); }},
+            { text: '咬牙拉開距離灌藥水', next: 'B06win', cond: () => state.items.includes('治療藥水'), action: () => { state.hp -= 5; state.items = state.items.filter(i => i !== '治療藥水'); }},
+            { text: '那一刀被皮甲擋住了大部分', next: 'B06win', cond: () => state.items.includes('皮甲已修理'), action: () => { state.hp -= 2; }},
+            { text: '硬撐', next: 'DEATH' }
+        ]
+    },
+    
+    B06win: { title: '勝利', label: 'NEST_VICTORY', img: 'images/頭目剪影.png',
+        text: `你咬牙撐過最激烈的圍攻,逐個擊破。最後只剩頭目,它已經受傷,知道逃不掉,發出最後的咆哮衝向你。
+
+你側身閃過,反手一劍。頭目倒下。
+
+你割下所有哥布林的耳朵。前方是通往深處的通道。`,
+        choices: [
+            { text: '前往深處', next: 'D06', action: () => state.flags.ears += 6 }
+        ]
+    },
+    
+    D06: { title: '深處通道入口', label: 'DEEP_ENTRANCE', img: 'images/深處通道入口.png',
+        text: `巢穴戰鬥結束後,你站在一條向下延伸的通道前。空氣變得很冷,和洞窟前段完全不同。火把的火焰被往下吸,幾乎貼著火把頭晃動。
+
+牆壁上有古老的抓痕,五根平行的溝槽,比哥布林大得多,刻得很深。`,
+        choices: [
+            { text: '回頭,今天不是來探索這裡的', next: 'E01' },
+            { text: '再往前走幾步看看', next: 'D07' }
+        ]
+    },
+    
+    D07: { title: '深處通道', label: 'DEEP_DARKNESS', img: 'images/巢穴之後奏到深處後火焰被熄滅決定回去.png',
+        text: `你又向前走了一會。通道打開成一個巨大的空間,火把完全照不到對面牆壁。腳下地面非常平滑,像是被什麼東西長年磨過的。空氣裡有一股很淡很舊的味道,說不清楚是什麼。
+
+火把滅了。不是燒完,是被什麼東西吹滅的。
+
+黑暗中有呼吸聲,不是你自己的。`,
+        choices: [
+            { text: '立刻後退,不發出聲音', next: 'E01', action: () => state.flags.visitedDeep = true },
+        ]
+    },
+    
+    E01: { title: '離開洞窟', label: 'CAVE_EXIT', img: 'images/月夜回程小徑.png',
+        getText: () => `你帶著哥布林的耳朵走出洞窟。天已經黑了,月光灑在濕漉漉的地面上,照亮了一路上的腳印。
+
+${state.flags.cattleReleased ? '兩頭牛和幾隻羊在洞口外等著,看到你走出來開始騷動。你在月光下把牠們帶上,走回城裡。' : '你獨自沿著來時的路走回去,遠處偶爾傳來狼嚎聲。'}`,
+        getNext: () => state.flags.cattleReleased && state.flags.ears >= 5 ? 'E02' : 'E04',
+        choices: [
+            { text: '回到酒館', next: 'DYNAMIC' }
+        ]
+    },
+    
+    E02: { title: '交差', label: 'GUILD_SUCCESS', img: 'images/冒險者公會大廳.png',
+        getText: () => `你帶著${state.flags.ears}對哥布林耳朵和牲畜回到冒險者公會。公會裡的幾個人轉過頭來看了一眼。
+
+櫃台的人數了耳朵,點了點頭,遞過 60 銅。「幹得乾淨。」
+
+旁邊的農民看到牲畜立刻激動起來,塞給你 15 銅和一塊乳酪。「你救了它們,真的太謝謝你了!」
+
+收入: 75 銅 + 乳酪`,
+        choices: [
+            { text: '前往旅館', next: 'F01', action: () => { state.money += 75; state.items.push('乳酪'); }}
+        ]
+    },
+    
+    E03: { title: '交差', label: 'GUILD_CAPTURED', img: 'images/冒險者公會大廳.png',
+        text: `你帶著綁著的哥布林頭目回到公會,公會裡的人都看過來。
+
+「城塞那邊有人收...」櫃台的人說,「嚇死人了,你幹嘛活捉回來?」
+
+你感覺自己很傻,於是當眾把頭目殺掉了。`,
+        choices: [
+            { text: '前往旅館', next: 'F01', action: () => state.money += 60 }
+        ]
+    },
+    
+    E04: { title: '交差', label: 'GUILD_PARTIAL', img: 'images/冒險者公會大廳.png',
+        getText: () => `你帶著${state.flags.ears}對哥布林耳朵回到公會,${state.flags.cattleReleased ? '' : '沒有牲畜。'}櫃台的人${state.flags.cattleReleased ? '點了點頭' : '皺了皺眉'},接過去遞給你 ${state.flags.cattleReleased ? 60 : 40} 銅。
+
+${state.flags.cattleReleased ? '旁邊的農民看到牲畜立刻激動起來,塞給你 15 銅和一塊乳酪。' : ''}
+
+收入: ${state.flags.cattleReleased ? '75 銅 + 乳酪' : '40 銅'}`,
+        choices: [
+            { text: '前往旅館', next: 'F01', action: () => { state.money += state.flags.cattleReleased ? 75 : 40; if(state.flags.cattleReleased) state.items.push('乳酪'); }}
+        ]
+    },
+    
+    F01: { title: '旅館', label: 'INN_EVENING', img: 'images/旅館夜晚室內(改成酒館晚餐).png',
+        getText: () => `你坐在落水丘旅館的飯廳裡,喝著一碗暖呼呼的熱湯。今天花出去的和拿回來的在腦子裡過了一遍。
+
+住宿 5 銅。餐費 2 銅。
+
+你坐在位置上打瞌睡。明天又是新的一天。
+
+${state.flags.visitedDeep ? '\n洞窟深處那個呼吸聲還留在腦子裡。' : ''}
+
+===== 遊戲結束 =====
+
+最終狀態:
+• HP: ${state.hp}/${state.maxHp}
+• 金錢: ${state.money}銅
+• 哥布林耳朵: ${state.flags.ears}對
+• 牲畜: ${state.flags.cattleReleased ? '已救出' : '未救出'}
+• 傷勢: ${state.injuries.length > 0 ? state.injuries.join(', ') : '無'}`,
+        choices: [
+            { text: '🔄 重新開始', next: 'S01', action: resetGame }
+        ]
+    },
+    
+    DEATH: { title: '死亡', label: 'DEATH', img: 'images/月夜回程小徑.png',darkness: 0.95,
+        text: `你的視野逐漸模糊,意識沉入黑暗。
+
+洞窟深處,沒有人會知道你的故事。
+
+===== 遊戲結束 =====`,
+        choices: [
+            { text: '🔄 重新開始', next: 'S01', action: resetGame }
+        ]
+    }
+};
+
+// ===== 渲染場景 =====
+async function show(id) {
+    const s = scenes[id];
+    if (!s) return;
+    
+    state.scene = id;
+    
+    document.getElementById('scene-title').textContent = s.title;
+    document.getElementById('scene-label').textContent = s.label || 'UNKNOWN';
+    document.getElementById('scene-image').src = s.img;
+
+// 支持動態黑暗遮罩
+const darknessOverlay = document.getElementById('darkness-overlay');
+const darknessValue = s.getDarkness ? s.getDarkness() : (s.darkness || 0);
+darknessOverlay.style.opacity = darknessValue;
+
+updateStatus();
+
+document.getElementById('choices-container').innerHTML = '';
+
+const textEl = document.getElementById('text-content');
+const text = s.getText ? s.getText() : s.text;
+await typeText(text, textEl, 35);
+
+const dialogInner = document.querySelector('.dialog-inner');
+dialogInner.scrollTop = dialogInner.scrollHeight;
+
+setTimeout(() => showChoices(s.choices), 300);
+
+window.scrollTo(0, 0);
+}
+// ===== showPurchaseConfirm 函數 =====
+function showPurchaseConfirm(choice) {
+    const container = document.getElementById('choices-container');
+    
+    // 清空選項區
+    container.innerHTML = '';
+    
+    // 創建描述框
+    const descBox = document.createElement('div');
+    descBox.style.cssText = `
+        background: #111;
+        border: 2px solid #fff;
+        padding: 16px;
+        margin-bottom: 12px;
+    `;
+    descBox.innerHTML = `
+        <div style="font-size: 18px; margin-bottom: 12px; color: #fff;">
+            ${choice.desc || '確定購買此物品?'}
+        </div>
+        <div style="color: #ccc; font-size: 16px;">
+            價格: ${choice.price} 銅
+        </div>
+        <div style="color: #888; font-size: 14px; margin-top: 4px;">
+            購買後剩餘: ${state.money - choice.price} 銅
+        </div>
+    `;
+    container.appendChild(descBox);
+    
+    // 確認按鈕
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'choice-btn';
+    confirmBtn.textContent = '✓ 確認購買';
+    confirmBtn.onclick = () => {
+        state.money -= choice.price;
+        state.items.push(choice.item);
+        if (choice.action) choice.action();
+        updateStatus();
+        showChoices(scenes[state.scene].choices);
+    };
+    container.appendChild(confirmBtn);
+    
+    // 取消按鈕
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'choice-btn';
+    cancelBtn.textContent = '✗ 取消';
+    cancelBtn.onclick = () => {
+        showChoices(scenes[state.scene].choices);
+    };
+    container.appendChild(cancelBtn);
+}
+
+// ===== showChoices 函數 =====
+function showChoices(choices) {
+    const container = document.getElementById('choices-container');
+    container.innerHTML = '';
+    
+    choices.forEach(c => {
+        const isShopItem = c.price !== undefined;
+        const canAfford = !isShopItem || state.money >= c.price;
+        const alreadyOwned = c.item && state.items.includes(c.item);
+        
+        if (c.cond && !c.cond()) return;
+        
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        
+        if (isShopItem) {
+            if (alreadyOwned) {
+                btn.className += ' disabled';
+                btn.textContent = c.text + ' (已購買)';
+                btn.disabled = true;
+            } else if (!canAfford) {
+                btn.className += ' disabled';
+                btn.textContent = c.text + ' (金錢不足)';
+                btn.disabled = true;
+            } else {
+                btn.textContent = c.text;
+                btn.onclick = () => {
+                    showPurchaseConfirm(c);  // ← 只有這一行
+                };
+            }
+        } else {
+            btn.textContent = c.text;
+            btn.onclick = () => {
+                if (c.action) c.action();
+                const nextScene = c.next === 'DYNAMIC' ? scenes[state.scene].getNext() : c.next;
+                show(nextScene);
+            };
+        }
+        
+        container.appendChild(btn);
+    });
+}
+function updateStatus() {
+    document.getElementById('hp-display').textContent = `HP:${state.hp}/${state.maxHp}`;
+    document.getElementById('money-display').textContent = `${state.money}銅`;
+}
+
+function openInventory() {
+    const content = document.getElementById('inventory-content');
+    if (state.items.length === 0) {
+        content.innerHTML = '<p style="text-align:center; color:#666;">背包是空的</p>';
+    } else {
+        content.innerHTML = state.items.map(item => 
+            `<div class="modal-item">📦 ${item}</div>`
+        ).join('');
+    }
+    document.getElementById('inventory-modal').classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function saveGame() {
+    try {
+        localStorage.setItem('灰石洞窟_存檔', JSON.stringify(state));
+        alert('✅ 遊戲已存檔');
+    } catch (e) {
+        alert('❌ 存檔失敗');
+    }
+}
+
+function loadGame() {
+    try {
+        const saved = localStorage.getItem('灰石洞窟_存檔');
+        if (saved) {
+            Object.assign(state, JSON.parse(saved));
+            show(state.scene);
+            alert('✅ 遊戲已讀取');
+        } else {
+            alert('❌ 沒有存檔');
+        }
+    } catch (e) {
+        alert('❌ 讀檔失敗');
+    }
+}
+
+function resetGame() {
+    state.hp = 24;
+    state.money = 1;
+    state.items = [];
+    state.flags = { ears: 0, cattleReleased: false, visitedDeep: false };
+    state.injuries = [];
+}
+
+show('START');
+</script>
+
+</body>
+</html>
